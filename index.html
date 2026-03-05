@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดเก็บเกียรติบัตรออนไลน์</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --secondary: #f3f4f6;
+            --dark: #2c3e50;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--secondary); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: var(--dark); text-align: center; }
+        
+        /* Form Styling */
+        .form-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; background: #fafafa; padding: 20px; border-radius: 10px; border: 1px solid #ddd; }
+        .full-width { grid-column: span 2; }
+        input, button { padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; }
+        button { background: var(--primary); color: white; border: none; cursor: pointer; transition: 0.3s; font-weight: bold; }
+        button:hover { background: #357abd; }
+
+        /* Card Styling */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 30px; }
+        .card { background: white; border: 1px solid #eee; border-radius: 12px; overflow: hidden; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .card img { width: 100%; height: 160px; object-fit: cover; background: #eee; }
+        .card-body { padding: 15px; }
+        .card-body h4 { margin: 0 0 10px 0; color: var(--dark); font-size: 16px; }
+        .card-body p { margin: 5px 0; font-size: 13px; color: #666; }
+        .download-btn { display: block; text-align: center; background: #27ae60; color: white; text-decoration: none; padding: 8px; border-radius: 5px; margin-top: 10px; font-size: 14px; }
+        .delete-btn { background: #e74c3c; width: 100%; margin-top: 5px; padding: 5px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>บันทึกเกียรติบัตรของฉัน</h2>
+    
+    <div class="form-group">
+        <input type="date" id="date" placeholder="วันที่อบรม">
+        <input type="text" id="agency" placeholder="ชื่อหน่วยงานที่อบรม">
+        <input type="text" id="topic" class="full-width" placeholder="หัวข้อที่อบรม">
+        <div class="full-width">
+            <label>อัพโหลดรูปภาพเกียรติบัตร:</label>
+            <input type="file" id="imageInput" accept="image/*" style="width: 100%; margin-top: 5px;">
+        </div>
+        <button onclick="saveCertificate()" class="full-width">บันทึกข้อมูล</button>
+    </div>
+
+    <hr>
+
+    <div id="certGrid" class="grid">
+        </div>
+</div>
+
+<script>
+    // โหลดข้อมูลเมื่อเปิดหน้าเว็บ
+    document.addEventListener('DOMContentLoaded', displayCertificates);
+
+    function saveCertificate() {
+        const date = document.getElementById('date').value;
+        const agency = document.getElementById('agency').value;
+        const topic = document.getElementById('topic').value;
+        const imageInput = document.getElementById('imageInput');
+
+        if (!date || !agency || !topic || !imageInput.files[0]) {
+            alert("กรุณากรอกข้อมูลให้ครบถ้วนและเลือกรูปภาพครับ");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const certData = {
+                id: Date.now(),
+                date: date,
+                agency: agency,
+                topic: topic,
+                image: e.target.result // เก็บรูปเป็น Base64
+            };
+
+            let certs = JSON.parse(localStorage.getItem('myCertificates') || '[]');
+            certs.push(certData);
+            localStorage.setItem('myCertificates', JSON.stringify(certs));
+            
+            // ล้างฟอร์มและแสดงผลใหม่
+            resetForm();
+            displayCertificates();
+        };
+        reader.readAsDataURL(imageInput.files[0]);
+    }
+
+    function displayCertificates() {
+        const certGrid = document.getElementById('certGrid');
+        const certs = JSON.parse(localStorage.getItem('myCertificates') || '[]');
+        
+        certGrid.innerHTML = certs.map(cert => `
+            <div class="card">
+                <img src="${cert.image}" alt="Certificate">
+                <div class="card-body">
+                    <h4>${cert.topic}</h4>
+                    <p><b>หน่วยงาน:</b> ${cert.agency}</p>
+                    <p><b>วันที่:</b> ${cert.date}</p>
+                    <a href="${cert.image}" download="เกียรติบัตร_${cert.topic}.png" class="download-btn">ดาวน์โหลดรูปภาพ</a>
+                    <button class="delete-btn" onclick="deleteCert(${cert.id})">ลบข้อมูล</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function deleteCert(id) {
+        if(confirm('ยืนยันที่จะลบเกียรติบัตรนี้ใช่ไหม?')) {
+            let certs = JSON.parse(localStorage.getItem('myCertificates') || '[]');
+            certs = certs.filter(c => c.id !== id);
+            localStorage.setItem('myCertificates', JSON.stringify(certs));
+            displayCertificates();
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('date').value = '';
+        document.getElementById('agency').value = '';
+        document.getElementById('topic').value = '';
+        document.getElementById('imageInput').value = '';
+    }
+</script>
+
+</body>
+</html>
